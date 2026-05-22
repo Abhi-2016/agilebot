@@ -1,0 +1,265 @@
+# AgileBot — Project Plan
+
+## Problem Statement
+
+AgileBot exists to remove the rote work that scrum masters spend most of their time on — logging tickets, chasing updates, sending repeated emails, following up with team members and stakeholders. By automating that layer entirely, AgileBot frees the SM (or whoever is playing the role) to do the work that actually matters: surfacing problems early, helping the team solve them, and developing a deep enough understanding of the product to contribute meaningfully — not just facilitate.
+
+---
+
+## Ground Rules
+
+1. PLAN.md, CLAUDE.md, and README.md are updated after every commit to reflect what has been achieved.
+2. All system prompts are written by the user and reviewed by Claude.
+3. Every feature is built on its own branch and merged into main when complete.
+4. The user drives all decisions. Claude asks questions and guides — the user makes decisions.
+5. A robust eval suite is built alongside the product. The user makes eval decisions; Claude reviews and guides.
+6. Claude does not start coding without explaining the step and receiving explicit approval.
+7. These ground rules are followed without deviation.
+8. Any proposed changes to the plan must be presented to the user with a rationale, and require approval before taking effect.
+9. **Learning goal:** The user's aim is to become an Agentic AI Product Builder. Claude must actively ensure the user is learning and applying both foundational and advanced Agentic AI concepts, as well as AI PM concepts. Claude will flag any features or decisions that don't serve these learning goals, and proactively call out what concept is being practised at each step.
+10. **Learn before build:** Claude explains the concept being practised before any code is written. The user must understand the why before seeing the how.
+11. **Guided discovery:** For PM exercises (metrics, evals, specs, etc.), Claude leads with questions and the user provides the answers. Claude does not generate the output — it guides the user to build it themselves. Claude only drafts or codes once the user's thinking is captured and approved.
+12. **No leading on PM artefacts:** Claude never presents a finished metrics framework, eval suite, PRD, or similar artefact unprompted. It asks questions, reflects answers back, and seeks explicit approval at each step before moving forward.
+13. **Honest feedback:** Claude is not sycophantic. Claude pushes back when rationale is weak, flags decisions with unacknowledged tradeoffs, and challenges unmeasurable metrics. Equally, Claude explicitly calls out strong product thinking and explains why it is strong. The user is here to learn — agreement without challenge is not useful.
+14. **Eval design before ship:** The eval suite scoring rubrics, judge prompts, and pass/fail thresholds must be designed in Week 3 even if the suite is not built until Week 4. "Fast follow" is only acceptable if the design work is done first.
+15. **Living learning log:** PLAN.md, CLAUDE.md, and README.md each maintain a learning log that is updated after every commit. The log captures: concepts practised, decisions taken (and why), what went wrong and what was learned from it, and moments of strong product thinking. This project is a portfolio artefact — the log must be honest, specific, and useful to someone reading it cold. Claude is responsible for prompting the user to reflect and update the log after each meaningful milestone.
+
+---
+
+## Architecture
+
+### Why Supervisor + Specialist (not monolithic)
+
+We chose a multi-agent architecture over a single agent for three reasons:
+
+1. **Separation of concerns** — each agent owns one domain and does it well. Easier to build, test, debug, and improve independently.
+2. **Token management** — focused agents have smaller, tighter context windows. One agent holding everything would bloat context and degrade output quality.
+3. **Security** — specialist agents only have access to the tools and data they need. The Comms Agent has no access to JIRA credentials. The Ticket Agent cannot read chat messages.
+
+### Why Microsoft Teams (not a custom dashboard)
+
+The company this is being built for uses Microsoft Teams and the M365 platform. No adoption friction — the bot lives where the team already works. The M365 ecosystem also unlocks Outlook Calendar, email, and Teams meeting transcripts under a single auth setup, which expands AgileBot's surface area in later phases for free.
+
+### Why JIRA only (MVP)
+
+The target company uses JIRA. Starting with one integration done well is more valuable than three integrations done poorly. The pattern is proven first, then expanded to Linear, Azure DevOps, and Shortcut in later phases.
+
+---
+
+## Agent Map
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   ORCHESTRATOR AGENT                        │
+│  Routes inbound events → specialist agents                  │
+│  Maintains global sprint state                              │
+│  Owns all HITL approval gates                               │
+└──┬──────────┬──────────┬──────────┬──────────┬─────────────┘
+   │          │          │          │          │
+   ▼          ▼          ▼          ▼          ▼
+┌──────┐ ┌───────┐ ┌────────┐ ┌────────┐ ┌──────────┐
+│TICKET│ │COMMS  │ │CEREMONY│ │BLOCKER │ │ANALYTICS │
+│AGENT │ │AGENT  │ │AGENT   │ │AGENT   │ │AGENT     │
+└──────┘ └───────┘ └────────┘ └────────┘ └──────────┘
+```
+
+| Agent | Responsibility |
+|---|---|
+| **Orchestrator** | Owns all inbound events. Routes to specialists. Manages HITL approval flow. Holds sprint state. |
+| **Ticket Agent** | JIRA read/write. Ticket creation, grooming checks, status updates, dependency mapping. |
+| **Comms Agent** | Monitors Teams channels. Intent detection (blocker / book call / log defect). Sentiment analysis. Concise update summaries. |
+| **Blocker Agent** | Detects blockers via chat inference and proactive ticket cadence checks. Generates proportionate resolution steps. Drafts actions (emails, messages) for SM approval. |
+| **Ceremony Agent** | Async standup collection and summary. Sprint planning. Retrospective clustering. Sprint review summaries. Suggests the right ceremony for the moment in the sprint. |
+| **Analytics Agent** | Pulls data from JIRA. Presents velocity, throughput, blocker trends, and sentiment. Does not hallucinate — every figure must be traceable to source data. |
+
+---
+
+## Interface
+
+**Primary UI:** Microsoft Teams (Adaptive Cards)
+**Secondary:** JIRA (for ticket actions)
+**Future:** Outlook Calendar, Teams meeting transcripts, email (via Microsoft Graph API)
+
+### Bot Commands
+
+```
+@AgileBot standup          → triggers async standup collection
+@AgileBot blocked [desc]   → blocker intake + analysis
+@AgileBot retro            → opens retro card collection
+@AgileBot sprint status    → current sprint health summary
+@AgileBot groom [ticket]   → groom a specific JIRA ticket
+@AgileBot digest           → weekly metrics summary
+```
+
+---
+
+## HITL Approval Matrix
+
+| Action | Auto-execute | Needs SM Approval |
+|---|---|---|
+| Post standup summary | ✅ | |
+| Flag under-groomed ticket | ✅ | |
+| Generate retro clusters | ✅ | |
+| Comment on JIRA ticket | ✅ | |
+| Suggest blocker resolution steps | ✅ | |
+| Send stakeholder digest | ✅ | |
+| Draft reminder email | ✅ (draft only) | ✅ (send) |
+| Move ticket status | | ✅ |
+| Assign ticket to person | | ✅ |
+| Book / cancel calendar events | | ✅ |
+| Send external email | | ✅ |
+| Escalate to leadership | | ✅ |
+
+---
+
+## Success Metrics
+
+### North Star — Sprint Velocity Growth
+**Target: +15% within 3 months of deployment**
+
+Measured as: average story points completed per sprint (rolling 4-week window) vs. baseline at deployment date.
+
+**Why velocity:** If AgileBot is removing admin friction, catching blockers early, and keeping tickets well-groomed, the team should ship more. Velocity is the output that proves the tool is working — not just active.
+
+**Known assumption:** Velocity can be influenced by factors outside AgileBot's control (team size changes, scope creep, technical debt). Any sprint where an external factor skews the number must be flagged and excluded from the trend.
+
+---
+
+### Product Metrics
+
+| Metric | What it measures | How to measure |
+|---|---|---|
+| Blocker detection rate — chat inference | % of real blockers caught via language signals in Teams | Compare agent-flagged blockers vs. blockers later self-reported — gaps are misses |
+| Blocker detection rate — ticket cadence | % of stale tickets that had a real blocker behind them | Proactive check results vs. developer confirmation |
+| Admin automation rate | % of JIRA updates, status changes, and ticket logs made by bot vs. human | JIRA activity log — author = AgileBot vs. human |
+| Blocker resolution time | Time from blocker detected → SM actioned → team unblocked | Timestamps in blockers table |
+| SM response time to HITL cards | How quickly SM approves / rejects Adaptive Cards | Teams card interaction timestamps |
+| Team self-service rate | How often team queries AgileBot directly instead of pinging a person | Bot query logs vs. direct DMs to SM |
+
+---
+
+### AI Quality Metrics
+
+| Signal | What it catches |
+|---|---|
+| Blocker detection false positive rate | Agent flags something as a blocker that isn't — erodes SM trust over time |
+| HITL rejection rate | SM rejects proposed steps — indicates agent reasoning is off |
+| Ticket grooming accuracy | % of flagged tickets that were genuinely under-groomed vs. false flags |
+| Intent classification accuracy | Agent correctly identifies "book a call" vs. "log a defect" vs. "blocker" |
+| Analytics accuracy | Any figure that doesn't match JIRA source data is a hard fail |
+
+---
+
+## Eval Suite
+
+**Shipping:** Week 4 (fast follow)
+**Design deadline:** End of Week 3 — rubrics, judge prompts, and pass/fail thresholds must be defined before MVP ships.
+
+| Agent | Eval | Pass Criteria | Fail Signal |
+|---|---|---|---|
+| **Ticket Agent** | Ticket creation from tagged request | Ticket created in JIRA with all required fields | Missing fields → error thrown, not silent failure |
+| **Comms Agent** | Sprint update summary quality | Concise, high-level, covers all active tickets | Exceeds length threshold, repeats information, or misses an active ticket |
+| **Blocker Agent** | Unblocking step proportionality | Steps are actionable and proportionate to blocker severity | Disproportionate escalation (e.g. VP for a missing API key) or vague steps |
+| **Ceremony Agent** | Right ceremony for sprint moment | Correct ceremony suggested given sprint day and context | Planning suggested mid-sprint; retro before sprint ends |
+| **Analytics Agent** | Data accuracy | All figures traceable to current JIRA state | Any hallucinated or stale number is a hard fail |
+
+### Blocker Agent — Eval Pattern (LLM-as-Judge)
+
+```
+1. Blocker detected (chat inference or ticket cadence check)
+2. Blocker Agent generates resolution steps
+3. LLM-as-judge scores steps:
+   - Are they proportionate to blocker severity?
+   - Are they actionable without additional information?
+   - Is the right person / team being involved?
+4. Score passes threshold → draft action prepared (email, Teams message, JIRA comment)
+5. Adaptive Card surfaced to SM:
+   - Blocker summary
+   - Proposed steps + judge score
+   - Draft action (e.g. full email body)
+   - [Approve & Send] [Edit] [Escalate]
+6. SM hits send. AgileBot executes.
+```
+
+**The SM never writes from scratch — only reviews and approves.**
+
+---
+
+## 3-Week MVP Build Plan
+
+### Week 1 — Core Infrastructure + JIRA
+| Day | Work |
+|---|---|
+| 1–2 | Project scaffold. FastAPI. PostgreSQL schema. Claude Agent SDK orchestrator skeleton. |
+| 3–4 | JIRA integration (read/write). Ticket grooming checks against template. |
+| 5 | JIRA → Teams alerts for missing story points, unassigned tickets. |
+
+### Week 2 — Teams Bot + Blocker Intelligence
+| Day | Work |
+|---|---|
+| 6–7 | Azure Bot Service setup. Teams webhook listener. Intent detection (blocker / book call / log defect). |
+| 8–9 | Async standup collection + summary generation. Blocker Agent: analyze + propose steps. |
+| 10 | HITL Adaptive Card approval flow (approve / edit / escalate). |
+
+### Week 3 — Ceremonies + Eval Design + Polish
+| Day | Work |
+|---|---|
+| 11–12 | Sprint planning helper (velocity, capacity, backlog suggestions). |
+| 13–14 | Retro collection + theme clustering. Basic metrics: velocity, blockers, sentiment. |
+| 15 | Eval rubrics + judge prompts designed. End-to-end testing. Bug fixes. Demo prep. |
+
+### Week 4 — Eval Suite (Fast Follow)
+- Build and wire LLM-as-judge for Blocker Agent
+- Implement pass/fail thresholds across all 5 agents
+- First eval run against real sprint data
+
+---
+
+## Tech Stack
+
+| Layer | Choice | Rationale |
+|---|---|---|
+| Agent Runtime | Claude API (claude-opus-4) | Tool use, long context, multi-agent |
+| Orchestration | Claude Agent SDK | Multi-agent coordination |
+| Backend | FastAPI (Python) | Async, webhook handling |
+| Bot Framework | botbuilder-python | Azure Bot Service + Teams integration |
+| Primary DB | PostgreSQL (Supabase) | Managed, zero-ops, realtime |
+| Cache / State | Redis | Active sprint state, rate limits |
+| Auth | Azure AD | M365 ecosystem, single auth for Teams + Graph API |
+| Hosting | Railway (MVP) → AWS ECS (scale) | Simple Docker-based start |
+| Observability | LangSmith + Datadog | Agent traces + infra metrics |
+
+---
+
+## Database Schema (MVP)
+
+```sql
+teams         -- team config, JIRA project key, Teams channel ID
+members       -- name, Teams ID, JIRA ID, role
+sprints       -- active sprint per team, goal, dates, velocity
+blockers      -- detected blockers, source, resolution state, timestamps
+ceremonies    -- standup / retro records, summaries
+action_items  -- from retros, tracked across sprints, recurring flag
+```
+
+---
+
+## Learning Log
+
+This log is updated after every meaningful milestone. It is honest — it captures what went wrong as well as what went right. It exists to demonstrate how product thinking develops over time, not just what was built.
+
+| Date | Concept practised | Decision taken | Right or wrong | What was learned |
+|---|---|---|---|---|
+| 2026-05-22 | Multi-agent architecture | Supervisor + specialist pattern over monolithic agent | ✅ Right | Separation of concerns, token management, and security are three distinct justifications for multi-agent — not the same argument stated three ways |
+| 2026-05-22 | North star metric selection | Sprint velocity (+15% in 3 months) over activity metrics (tickets logged by bot) | ✅ Strong product sense | Outcome metrics prove value. Activity metrics are easy to hit and easy to game. Velocity forces honest measurement |
+| 2026-05-22 | Metric granularity | Track chat-inference blocker detection and ticket-cadence detection separately | ✅ Right | If both go wrong, the fixes are different. Combining them hides signal |
+| 2026-05-22 | Eval sequencing | Ship eval suite in Week 4, design it in Week 3 | ✅ Right | Evaluating behaviour that is still changing is wasted effort. But design must happen before ship — "fast follow" without a design date becomes never |
+| 2026-05-22 | Scope control | JIRA only for MVP, Teams only for MVP | ✅ Right | One integration done well beats three done poorly. Prove the pattern, then expand |
+
+---
+
+## Progress Log
+
+| Date | Milestone |
+|---|---|
+| 2026-05-22 | Project initiated. Problem statement defined. Architecture decided. Agent map confirmed. Success metrics and eval suite designed. Ground rules set. PLAN.md created. |
