@@ -191,6 +191,7 @@ Measured as: average story points completed per sprint (rolling 4-week window) v
 | Day | Work |
 |---|---|
 | 1–2 | Project scaffold. FastAPI. PostgreSQL schema. Claude Agent SDK orchestrator skeleton. |
+| 2 | **Prompt caching (Version 1)** — add `cache_control` to all static system prompts at build time. Not bolted on later. |
 | 3–4 | JIRA integration (read/write). Ticket grooming checks against template. |
 | 5 | JIRA → Teams alerts for missing story points, unassigned tickets. |
 
@@ -212,6 +213,50 @@ Measured as: average story points completed per sprint (rolling 4-week window) v
 - Build and wire LLM-as-judge for Blocker Agent
 - Implement pass/fail thresholds across all 5 agents
 - First eval run against real sprint data
+
+---
+
+## Enterprise Phase
+
+**Sequencing rationale:** Enterprise hardening begins only after the MVP is proven with a real team. Building enterprise features before the core product is validated is wasted effort. The right order is: MVP → prove value → harden → go to market.
+
+**Trigger to start this phase:** MVP has been running with at least one real team for 4+ weeks and velocity metric is trending positively.
+
+### E1 — Multi-Tenancy
+Every company gets an isolated tenant. Separate DB schemas per tenant. No cross-tenant data access is architecturally possible. Tenant provisioning via admin portal.
+
+### E2 — Prompt Caching (Version 2 — Semantic Cache)
+Redis layer that catches semantically similar queries before they reach the LLM. "What's the sprint status?" asked by 10 developers = 1 LLM call, not 10. Built on top of Version 1 (static prompt caching already in MVP).
+- Embedding similarity check on every inbound query
+- Cache hit threshold: configurable per agent
+- Estimated additional savings: 20–30% on top of Version 1
+
+### E3 — Horizontal Scaling + Async Job Queue
+| Current (MVP) | Enterprise |
+|---|---|
+| Single FastAPI instance | Multiple instances behind AWS ALB load balancer |
+| Requests handled inline | Celery + Redis async job queue for heavy tasks |
+| | Auto-scaling based on request volume |
+| | JIRA sweeps and analytics runs moved to background jobs |
+
+### E4 — Security Hardening
+| Concern | Solution |
+|---|---|
+| Data encryption | TLS 1.3 in transit, AES-256 at rest |
+| Identity | Full SAML SSO via Azure AD — no separate credentials |
+| Authorisation | RBAC middleware on every endpoint — team-scoped data |
+| Audit logs | Every agent action logged with timestamp, actor, and outcome — exportable for legal |
+| DDoS protection | Cloudflare in front of all endpoints |
+| WAF | Web Application Firewall on all inbound traffic |
+
+### E5 — Data Residency
+Region selector at tenant onboarding. EU / Canada / US deployments. Data never leaves the chosen region. Supabase instances pinned per region.
+
+### E6 — Compliance Certifications
+SOC 2 Type II, GDPR, ISO 27001. Third-party audited. Required before enterprise procurement will evaluate the tool. Not optional — plan the certification process 3–6 months before go-to-market.
+
+### E7 — Distribution
+Microsoft Teams App Store listing. One-click tenant-wide deployment. IT admin approval flow built in. Automatic version updates.
 
 ---
 
@@ -263,3 +308,37 @@ This log is updated after every meaningful milestone. It is honest — it captur
 | Date | Milestone |
 |---|---|
 | 2026-05-22 | Project initiated. Problem statement defined. Architecture decided. Agent map confirmed. Success metrics and eval suite designed. Ground rules set. PLAN.md created. |
+| 2026-05-24 | Enterprise phase designed. Prompt caching (Version 1) added to MVP Day 2. Enterprise phase sequenced deliberately after MVP validation — not built in parallel. |
+
+---
+
+## Learning Log
+
+### Concepts Practised
+
+| Concept | Where | Notes |
+|---|---|---|
+| Supervisor + specialist architecture | Agent map design | User independently reasoned separation of concerns, token management, and security as justification — without being prompted |
+| Human-in-the-loop (HITL) patterns | HITL approval matrix | Designed the right boundary between auto-execute and SM approval. SM reviews drafts, never writes from scratch. |
+| Prompt caching | MVP Day 2 + Enterprise E2 | User independently arrived at the concept of token load balancing before knowing the term. Version 1 (static cache) in MVP. Version 2 (semantic cache) in enterprise. |
+| Multi-tenancy | Enterprise phase | User identified data isolation as a security concern unprompted. Extended to RBAC and team-scoped access. |
+| Data residency | Enterprise phase | User named geographic data constraints (Canada example) without prompting. Strong real-world product awareness. |
+| Cost and latency tradeoffs | Prompt caching decision | User chased 60-80% savings as a product decision, not just an engineering one. Correct instinct. |
+| Eval strategy | Eval suite design | LLM-as-judge chosen for Blocker Agent. Eval design deadline set before ship. Fast follow sequenced correctly. |
+
+### Strong Product Decisions
+
+| Decision | Why it was good |
+|---|---|
+| Velocity as north star metric | Outcome metric, not activity metric. Harder to game, directly tied to team value. Most PMs pick the easier activity metric. |
+| Track blocker detection methods separately | Correct. Different failure modes require different fixes. Combining them would hide signal. |
+| Prompt caching in MVP, not post-MVP | Baking cost efficiency in from Day 1 rather than retrofitting it. Shows cost awareness as a first-class concern. |
+| Enterprise phase sequenced after MVP validation | Avoids the common trap of over-engineering before proving value. Shows build sequencing maturity. |
+| Teams as UI instead of custom dashboard | Eliminated an entire frontend build. Reduced adoption friction. Leveraged existing M365 auth. |
+
+### Decisions Challenged / Pushed Back On
+
+| Decision | Challenge | Outcome |
+|---|---|---|
+| 3-week MVP timeline | Aggressive given eval suite scope | Eval suite moved to Week 4 fast follow. Design still required by end of Week 3. |
+| Eval suite in MVP | Would bloat scope and evaluate unstable behaviour | Moved to Week 4. Design deadline held firm. |
