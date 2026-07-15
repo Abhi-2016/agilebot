@@ -104,10 +104,10 @@ Claude must:
 | CLAUDE.md | ✅ Complete |
 | README.md | ✅ Complete |
 | Repo on GitHub | ✅ Live — https://github.com/Abhi-2016/agilebot |
-| FastAPI scaffold | 🔜 Next — Week 1 Day 1 |
-| Orchestrator skeleton | 🔜 Week 1 Day 1–2 |
-| Prompt caching (V1) | 🔜 Week 1 Day 2 |
-| JIRA integration | 🔜 Week 1 Day 3–4 |
+| FastAPI scaffold | ✅ Complete — PR #1 merged |
+| Orchestrator skeleton | ✅ Complete — PR #1 merged |
+| Prompt caching (V1) | ✅ Complete — cache_control on orchestrator system prompt |
+| JIRA integration | 🔜 Next — Week 1 Day 3–4 |
 | Teams bot | 🔜 Week 2 |
 | Blocker Agent | 🔜 Week 2 |
 | Ceremonies | 🔜 Week 3 |
@@ -131,3 +131,4 @@ Claude must:
 | Date | Concepts practised | Observations |
 |---|---|---|
 | 2026-05-24 | Multi-agent architecture, HITL patterns, north star metrics, eval sequencing, prompt caching, cost/latency tradeoffs, enterprise architecture, data residency, multi-tenancy | User independently arrived at prompt caching (called it "token balancer") before knowing the term — strong instinct. Chose velocity over activity metrics for north star without prompting — correct. Identified data residency and RBAC as enterprise security concerns unprompted. Pushed back on timeline appropriately when scope was added. |
+| 2026-07-15 | Agentic tool-use loop, webhook pattern, prompt caching V1 implementation, interface before implementation, Pydantic validation at system boundaries, health check pattern | Built and merged PR #1. FastAPI scaffold complete. Orchestrator skeleton wired with cache_control. /health verified. All 5 specialist agents stubbed with defined contracts. Teams webhook endpoint receives and routes events end-to-end. |

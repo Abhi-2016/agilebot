@@ -308,7 +308,9 @@ This log is updated after every meaningful milestone. It is honest — it captur
 | Date | Milestone |
 |---|---|
 | 2026-05-22 | Project initiated. Problem statement defined. Architecture decided. Agent map confirmed. Success metrics and eval suite designed. Ground rules set. PLAN.md created. |
+| 2026-07-15 | Orchestrator system prompt written by user and reviewed by Claude. |
 | 2026-05-24 | Enterprise phase designed. Prompt caching (Version 1) added to MVP Day 2. Enterprise phase sequenced deliberately after MVP validation — not built in parallel. |
+| 2026-07-15 | Week 1 Day 1-2 complete. FastAPI scaffold, orchestrator skeleton, prompt caching, 5 specialist stubs, PostgreSQL schema, Supabase client. PR #1 merged. /health endpoint verified locally. |
 
 ---
 
@@ -325,6 +327,9 @@ This log is updated after every meaningful milestone. It is honest — it captur
 | Data residency | Enterprise phase | User named geographic data constraints (Canada example) without prompting. Strong real-world product awareness. |
 | Cost and latency tradeoffs | Prompt caching decision | User chased 60-80% savings as a product decision, not just an engineering one. Correct instinct. |
 | Eval strategy | Eval suite design | LLM-as-judge chosen for Blocker Agent. Eval design deadline set before ship. Fast follow sequenced correctly. |
+| Prompt caching V1 implementation | orchestrator.py | cache_control added to static system prompt from first commit. Baking cost efficiency in early costs nothing extra — retrofitting touches every agent. |
+| Webhook pattern | Teams endpoint | Teams pushes events to AgileBot rather than AgileBot polling. Lower latency, lower resource usage, correct mental model for event-driven agentic systems. |
+| Interface before implementation | Stub agents | All 5 specialist agents built as stubs with defined contracts. Orchestrator routes correctly end-to-end before any specialist logic exists. |
 
 ### Strong Product Decisions
 
@@ -335,6 +340,7 @@ This log is updated after every meaningful milestone. It is honest — it captur
 | Prompt caching in MVP, not post-MVP | Baking cost efficiency in from Day 1 rather than retrofitting it. Shows cost awareness as a first-class concern. |
 | Enterprise phase sequenced after MVP validation | Avoids the common trap of over-engineering before proving value. Shows build sequencing maturity. |
 | Teams as UI instead of custom dashboard | Eliminated an entire frontend build. Reduced adoption friction. Leveraged existing M365 auth. |
+| Interface before implementation (stubs) | Built all 5 specialist agents as stubs with defined contracts before writing any logic. Orchestrator routes end-to-end correctly — logic fills in later without breaking the flow. |
 
 ### Decisions Challenged / Pushed Back On
 
