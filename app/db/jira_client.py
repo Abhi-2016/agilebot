@@ -1,5 +1,6 @@
 import httpx
 import base64
+from typing import Optional
 from app.config import settings
 
 # Basic Auth header — email:api_token base64-encoded, required by JIRA Cloud
@@ -16,7 +17,7 @@ HEADERS = {
 BASE_URL = settings.jira_base_url.rstrip("/")
 
 # Cached in memory after first discovery — avoids repeated /field calls
-_story_points_field: str | None = None
+_story_points_field: Optional[str] = None
 
 
 def get(path: str, params: dict = None) -> dict:
