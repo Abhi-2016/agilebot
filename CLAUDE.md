@@ -66,6 +66,8 @@ Claude must:
 | Agent pattern | Supervisor + specialist (not monolithic) | Separation of concerns, token management, security isolation |
 | Interface | Microsoft Teams (Adaptive Cards) | Company uses M365. No adoption friction. Single auth. |
 | Ticketing (MVP) | JIRA only | Company uses JIRA. One integration proven well > three done poorly. |
+| JIRA integration pattern | Pre-built tool functions + JQL fallback | Pre-built tools for 90% of use cases (reliable, testable). JQL fallback for freeform queries. Atlassian MCP deferred to enterprise phase. |
+| JIRA query modes | SM-initiated + proactive scheduled reports | SM asks via Teams; AgileBot also generates reports on cron cadence. Both modes use same tool functions. |
 | Backend | FastAPI (Python) | Async, webhook-ready, lightweight |
 | Database | PostgreSQL via Supabase | Managed, zero-ops, realtime, RLS |
 | Cache | Redis | Sprint state, rate limits, async queue |
@@ -97,7 +99,7 @@ Claude must:
 
 ## Build Status
 
-### Current Phase: Pre-build — Setup complete
+### Current Phase: Week 1 — JIRA Integration (Days 3–5)
 | Item | Status |
 |---|---|
 | PLAN.md | ✅ Complete |
@@ -107,7 +109,7 @@ Claude must:
 | FastAPI scaffold | ✅ Complete — PR #1 merged |
 | Orchestrator skeleton | ✅ Complete — PR #1 merged |
 | Prompt caching (V1) | ✅ Complete — cache_control on orchestrator system prompt |
-| JIRA integration | 🔜 Next — Week 1 Day 3–4 |
+| JIRA integration | 🔄 In progress — feature/week1-jira-integration |
 | Teams bot | 🔜 Week 2 |
 | Blocker Agent | 🔜 Week 2 |
 | Ceremonies | 🔜 Week 3 |

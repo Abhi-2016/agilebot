@@ -5,7 +5,7 @@
 | Week | Focus | Status |
 |---|---|---|
 | Week 1 — Days 1-2 | FastAPI scaffold, orchestrator skeleton, prompt caching | ✅ Complete |
-| Week 1 — Days 3-5 | JIRA integration, ticket grooming, alerts | 🔜 Next |
+| Week 1 — Days 3-5 | JIRA integration, ticket grooming, alerts | 🔄 In progress |
 | Week 2 | Teams bot, intent detection, standup, blocker HITL | 🔜 Pending |
 | Week 3 | Ceremonies, metrics, eval suite design | 🔜 Pending |
 | Week 4 | Eval suite build (fast follow) | 🔜 Pending |
@@ -49,6 +49,20 @@ AGENT     AGENT   AGENT    AGENT     AGENT
 Events arrive from three sources: **Microsoft Teams messages**, **JIRA updates**, and **scheduled triggers** (cron jobs). The orchestrator classifies each event, routes to the right specialist, and gates any consequential action through SM approval.
 
 See [PLAN.md](./PLAN.md) for full architecture decisions and rationale.
+
+### JIRA Integration
+
+AgileBot connects to JIRA via pre-built tool functions. Each function maps to a specific use case — reliable, testable, and eval-able. For freeform queries, the agent falls back to JQL generation with validation before execution.
+
+| Tool | What it returns |
+|---|---|
+| `get_sprint_health()` | Open tickets, blocked count, completion % for active sprint |
+| `get_blocked_tickets()` | All blocked tickets with assignee and days blocked |
+| `get_ungroomed_stories()` | Tickets missing story points, assignee, or description |
+| `get_team_velocity()` | Story points completed per sprint over last N sprints |
+| `get_ticket_detail(id)` | Full story detail: description, AC, comments, status |
+
+Queries are triggered two ways: SM asks via Teams (`@AgileBot what's blocking the sprint?`) or AgileBot runs on a schedule and posts a report automatically.
 
 ---
 

@@ -44,6 +44,37 @@ The company this is being built for uses Microsoft Teams and the M365 platform. 
 
 The target company uses JIRA. Starting with one integration done well is more valuable than three integrations done poorly. The pattern is proven first, then expanded to Linear, Azure DevOps, and Shortcut in later phases.
 
+### JIRA Integration Approach — Pre-built Tool Functions (Option 2)
+
+Three options were evaluated:
+
+| Option | Approach | Verdict |
+|---|---|---|
+| 1 — NL → JQL | LLM translates natural language to JQL, executes against JIRA REST API | Fallback only — flexible but LLM can generate invalid JQL |
+| 2 — Pre-built tools | Specific tool functions per use case (get_sprint_health, get_blocked_tickets, etc.) | **Primary approach** — reliable, testable, eval-able |
+| 3 — Atlassian MCP | Native MCP connector, no custom HTTP wrappers | Enterprise phase — less control, token bloat risk without filtering |
+
+**Decision: Option 2 as foundation, Option 1 as fallback for freeform queries.**
+
+Pre-built tools cover 90% of AgileBot's JIRA needs. For the 10% of freeform questions, the LLM falls back to JQL generation with validation before execution.
+
+### JIRA Query Modes — Both Supported
+
+Two distinct query modes, both required:
+
+1. **SM-initiated query** — SM asks `@AgileBot what's blocking the sprint?` in Teams. Ticket Agent selects the right tool and returns a plain English summary.
+2. **Proactive report** — AgileBot runs on a schedule (cron), generates sprint health and grooming reports automatically, posts to Teams without being asked.
+
+### JIRA Tool Functions (MVP)
+
+| Function | What it does | Triggered by |
+|---|---|---|
+| `get_sprint_health()` | Current sprint: open tickets, blocked count, completion % | SM query + scheduled report |
+| `get_blocked_tickets()` | All tickets flagged as blocked with assignee and age | SM query + blocker detection cadence |
+| `get_ungroomed_stories()` | Tickets missing story points, assignee, or description | Scheduled daily sweep |
+| `get_team_velocity()` | Story points completed per sprint over last N sprints | SM query + weekly digest |
+| `get_ticket_detail(ticket_id)` | Full story detail: description, AC, comments, status | SM query + blocker analysis |
+
 ---
 
 ## Agent Map
