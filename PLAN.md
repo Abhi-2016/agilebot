@@ -331,6 +331,8 @@ This log is updated after every meaningful milestone. It is honest — it captur
 | 2026-05-22 | Metric granularity | Track chat-inference blocker detection and ticket-cadence detection separately | ✅ Right | If both go wrong, the fixes are different. Combining them hides signal |
 | 2026-05-22 | Eval sequencing | Ship eval suite in Week 4, design it in Week 3 | ✅ Right | Evaluating behaviour that is still changing is wasted effort. But design must happen before ship — "fast follow" without a design date becomes never |
 | 2026-05-22 | Scope control | JIRA only for MVP, Teams only for MVP | ✅ Right | One integration done well beats three done poorly. Prove the pattern, then expand |
+| 2026-07-18 | LLM output parsing | Added fuzzy normalization to `_parse_routing()` in orchestrator.py | ✅ Right | LLMs don't always format output exactly as instructed. A silent fallback (`agent = "comms"`) masked a correct reasoning response — the LLM knew the right answer, the parser discarded it. Fix: strip " agent" suffix and normalize synonyms before validating. Production standard: JSON mode, fuzzy normalization, or an explicit "unknown" state. Never a silent default. |
+| 2026-07-18 | System prompt precision | Added explicit routing decision rules to orchestrator system prompt | ✅ Right | Agent descriptions that say what an agent "owns" are insufficient for routing. The LLM needs explicit if/then routing rules, especially for overlapping concepts (blocker-the-noun vs. blocker-the-agent, JIRA data query vs. Comms Agent). The gap between good reasoning and correct output is often a parsing or prompt precision problem — not a model intelligence problem. |
 
 ---
 
@@ -342,6 +344,7 @@ This log is updated after every meaningful milestone. It is honest — it captur
 | 2026-07-15 | Orchestrator system prompt written by user and reviewed by Claude. |
 | 2026-05-24 | Enterprise phase designed. Prompt caching (Version 1) added to MVP Day 2. Enterprise phase sequenced deliberately after MVP validation — not built in parallel. |
 | 2026-07-15 | Week 1 Day 1-2 complete. FastAPI scaffold, orchestrator skeleton, prompt caching, 5 specialist stubs, PostgreSQL schema, Supabase client. PR #1 merged. /health endpoint verified locally. |
+| 2026-07-18 | JIRA tool functions complete. Ticket Agent agentic loop wired. Orchestrator routing bug (silent fallback masking) debugged and fixed. Routing decision rules added to orchestrator system prompt. feature/week1-jira-integration in progress. |
 
 ---
 
@@ -361,6 +364,8 @@ This log is updated after every meaningful milestone. It is honest — it captur
 | Prompt caching V1 implementation | orchestrator.py | cache_control added to static system prompt from first commit. Baking cost efficiency in early costs nothing extra — retrofitting touches every agent. |
 | Webhook pattern | Teams endpoint | Teams pushes events to AgileBot rather than AgileBot polling. Lower latency, lower resource usage, correct mental model for event-driven agentic systems. |
 | Interface before implementation | Stub agents | All 5 specialist agents built as stubs with defined contracts. Orchestrator routes correctly end-to-end before any specialist logic exists. |
+| Silent fallback masking | orchestrator.py `_parse_routing()` | When a parser silently falls back to a default on failure, the LLM's correct reasoning gets discarded invisibly. The system appeared to work (returned a result) but was wrong. Fix: explicit normalization + raise on unknown, not silent default. |
+| System prompt routing precision | orchestrator.txt | Agent descriptions are not sufficient for reliable routing in a multi-agent system. Explicit if/then routing rules are required — particularly when agent names overlap with domain concepts (e.g. "Blocker Agent" vs. questions about blockers). |
 
 ### Strong Product Decisions
 
