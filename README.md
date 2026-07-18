@@ -5,7 +5,7 @@
 | Week | Focus | Status |
 |---|---|---|
 | Week 1 — Days 1-2 | FastAPI scaffold, orchestrator skeleton, prompt caching | ✅ Complete |
-| Week 1 — Days 3-5 | JIRA integration, ticket grooming, alerts | 🔜 Next |
+| Week 1 — Days 3-5 | JIRA integration, ticket grooming, alerts | 🔄 In progress |
 | Week 2 | Teams bot, intent detection, standup, blocker HITL | 🔜 Pending |
 | Week 3 | Ceremonies, metrics, eval suite design | 🔜 Pending |
 | Week 4 | Eval suite build (fast follow) | 🔜 Pending |
@@ -49,6 +49,20 @@ AGENT     AGENT   AGENT    AGENT     AGENT
 Events arrive from three sources: **Microsoft Teams messages**, **JIRA updates**, and **scheduled triggers** (cron jobs). The orchestrator classifies each event, routes to the right specialist, and gates any consequential action through SM approval.
 
 See [PLAN.md](./PLAN.md) for full architecture decisions and rationale.
+
+### JIRA Integration
+
+AgileBot connects to JIRA via pre-built tool functions. Each function maps to a specific use case — reliable, testable, and eval-able. For freeform queries, the agent falls back to JQL generation with validation before execution.
+
+| Tool | What it returns |
+|---|---|
+| `get_sprint_health()` | Open tickets, blocked count, completion % for active sprint |
+| `get_blocked_tickets()` | All blocked tickets with assignee and days blocked |
+| `get_ungroomed_stories()` | Tickets missing story points, assignee, or description |
+| `get_team_velocity()` | Story points completed per sprint over last N sprints |
+| `get_ticket_detail(id)` | Full story detail: description, AC, comments, status |
+
+Queries are triggered two ways: SM asks via Teams (`@AgileBot what's blocking the sprint?`) or AgileBot runs on a schedule and posts a report automatically.
 
 ---
 
@@ -106,3 +120,5 @@ This project is built as a portfolio piece for an Agentic AI Product Builder car
 | 2026-07-15 | **Interface before implementation.** Built all five specialist agents as stubs with defined input/output contracts before writing any logic. The orchestrator routes correctly against stubs — logic fills in without breaking the flow. |
 | 2026-07-15 | **Prompt caching is a Day 1 decision, not a retrofit.** Added `cache_control` on the orchestrator system prompt from the first commit. Baking cost efficiency in early costs nothing extra. Adding it later requires touching every agent call. |
 | 2026-07-15 | **Webhooks over polling.** Teams pushes events to AgileBot rather than AgileBot polling Teams. Lower latency, lower resource usage, simpler code — and the right mental model for event-driven agentic systems. |
+| 2026-07-18 | **Silent fallback masking is a production anti-pattern.** The orchestrator was routing everything to the Comms Agent even though the LLM's reasoning explicitly said "Ticket Agent." The bug: parser couldn't match "Ticket Agent" to "ticket" and silently fell back to the default. The LLM was right the whole time. Fix: fuzzy normalization + strip " agent" suffix. Production lesson: never use a silent default when parsing LLM output — use explicit unknown states so failures are visible, not hidden. |
+| 2026-07-18 | **Agent descriptions are not routing rules.** Telling the orchestrator what each agent "owns" is insufficient. Overlapping domain language ("blocking the sprint" vs. "Blocker Agent") causes misroutes. Explicit if/then routing rules resolve ambiguity. The orchestrator needs to know not just what each agent does — but which agent wins when multiple could apply. |

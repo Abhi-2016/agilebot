@@ -64,9 +64,10 @@ def _parse_routing(raw: str) -> tuple[str, str, bool]:
         for line in raw.strip().splitlines()
         if ":" in line
     }
-    agent = lines.get("AGENT", "comms").lower()
-    if agent not in SPECIALIST_AGENTS:
-        agent = "comms"
+    raw_agent = lines.get("AGENT", "comms").lower()
+    # Normalize "ticket agent" → "ticket", "communications agent" → "comms", etc.
+    raw_agent = raw_agent.replace("communications", "comms").replace(" agent", "").strip()
+    agent = raw_agent if raw_agent in SPECIALIST_AGENTS else "comms"
     reasoning = lines.get("REASONING", "")
     hitl = lines.get("HITL", "no").lower() == "yes"
     return agent, reasoning, hitl

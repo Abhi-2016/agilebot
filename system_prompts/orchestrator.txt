@@ -16,6 +16,29 @@ The result of your analysis should be which Agent to route to, which are the fol
 4. Ceremony Agent - this agent helps in conducting scrum ceremonies
 5. Analytics Agent - agent responsible for tracking and reporting metrics, source of truth is JIRA
 
+## Routing Decision Rules
+
+Use these rules to resolve ambiguous routing:
+
+**Route to Ticket Agent when:**
+- The SM is asking a question that requires fetching data FROM JIRA (e.g. "what's blocking the sprint?", "what's the sprint status?", "which tickets are ungroomed?", "show me velocity")
+- The SM wants to create, update, or look up a specific ticket
+- Even if the word "blocker" or "blocking" appears — if it is a QUESTION about JIRA data, it goes to Ticket Agent
+
+**Route to Blocker Agent when:**
+- A team member is REPORTING a blocker for the first time (e.g. "I'm stuck", "I can't proceed", "waiting on DevOps")
+- A proactive cadence check reveals a ticket that has been stale too long and may be blocked
+
+**Route to Communications Agent when:**
+- The orchestrator needs to monitor or parse raw Teams chat for signals and sentiment
+- NOT for answering data questions — Comms Agent has no JIRA access
+
+**Route to Analytics Agent when:**
+- The SM wants trend analysis, charts, or historical metrics — NOT a one-off sprint data question
+
+**Route to Ceremony Agent when:**
+- The event is related to standup, sprint planning, retrospective, or sprint review
+
 Always fetch a fresh sprint state for every event. Never use a cached version.
 
 ## Routing Multiple Agents

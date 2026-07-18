@@ -66,6 +66,8 @@ Claude must:
 | Agent pattern | Supervisor + specialist (not monolithic) | Separation of concerns, token management, security isolation |
 | Interface | Microsoft Teams (Adaptive Cards) | Company uses M365. No adoption friction. Single auth. |
 | Ticketing (MVP) | JIRA only | Company uses JIRA. One integration proven well > three done poorly. |
+| JIRA integration pattern | Pre-built tool functions + JQL fallback | Pre-built tools for 90% of use cases (reliable, testable). JQL fallback for freeform queries. Atlassian MCP deferred to enterprise phase. |
+| JIRA query modes | SM-initiated + proactive scheduled reports | SM asks via Teams; AgileBot also generates reports on cron cadence. Both modes use same tool functions. |
 | Backend | FastAPI (Python) | Async, webhook-ready, lightweight |
 | Database | PostgreSQL via Supabase | Managed, zero-ops, realtime, RLS |
 | Cache | Redis | Sprint state, rate limits, async queue |
@@ -97,7 +99,7 @@ Claude must:
 
 ## Build Status
 
-### Current Phase: Pre-build — Setup complete
+### Current Phase: Week 1 — JIRA Integration (Days 3–5)
 | Item | Status |
 |---|---|
 | PLAN.md | ✅ Complete |
@@ -107,7 +109,7 @@ Claude must:
 | FastAPI scaffold | ✅ Complete — PR #1 merged |
 | Orchestrator skeleton | ✅ Complete — PR #1 merged |
 | Prompt caching (V1) | ✅ Complete — cache_control on orchestrator system prompt |
-| JIRA integration | 🔜 Next — Week 1 Day 3–4 |
+| JIRA integration | 🔄 In progress — feature/week1-jira-integration |
 | Teams bot | 🔜 Week 2 |
 | Blocker Agent | 🔜 Week 2 |
 | Ceremonies | 🔜 Week 3 |
@@ -132,3 +134,4 @@ Claude must:
 |---|---|---|
 | 2026-05-24 | Multi-agent architecture, HITL patterns, north star metrics, eval sequencing, prompt caching, cost/latency tradeoffs, enterprise architecture, data residency, multi-tenancy | User independently arrived at prompt caching (called it "token balancer") before knowing the term — strong instinct. Chose velocity over activity metrics for north star without prompting — correct. Identified data residency and RBAC as enterprise security concerns unprompted. Pushed back on timeline appropriately when scope was added. |
 | 2026-07-15 | Agentic tool-use loop, webhook pattern, prompt caching V1 implementation, interface before implementation, Pydantic validation at system boundaries, health check pattern | Built and merged PR #1. FastAPI scaffold complete. Orchestrator skeleton wired with cache_control. /health verified. All 5 specialist agents stubbed with defined contracts. Teams webhook endpoint receives and routes events end-to-end. |
+| 2026-07-18 | LLM output parsing robustness, system prompt routing precision, silent fallback masking | JIRA tool functions complete. Ticket Agent agentic loop live. Debugged orchestrator routing: LLM was reasoning correctly ("Ticket Agent") but parser was silently falling back to "comms" because "Ticket Agent" ≠ "ticket". Fix: fuzzy normalization in `_parse_routing()`. Key concept: the gap between correct LLM reasoning and correct system output is often a parsing problem, not a model problem. |
