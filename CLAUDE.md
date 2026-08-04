@@ -61,20 +61,33 @@ Claude must:
 
 ## Architecture Decisions (Already Made — Do Not Re-open Without Rationale)
 
-| Decision | What | Why |
+| Decision Area | What was decided | Why |
 |---|---|---|
-| Agent pattern | Supervisor + specialist (not monolithic) | Separation of concerns, token management, security isolation |
-| Interface | Microsoft Teams (Adaptive Cards) | Company uses M365. No adoption friction. Single auth. |
-| Ticketing (MVP) | JIRA only | Company uses JIRA. One integration proven well > three done poorly. |
-| JIRA integration pattern | Pre-built tool functions + JQL fallback | Pre-built tools for 90% of use cases (reliable, testable). JQL fallback for freeform queries. Atlassian MCP deferred to enterprise phase. |
-| JIRA query modes | SM-initiated + proactive scheduled reports | SM asks via Teams; AgileBot also generates reports on cron cadence. Both modes use same tool functions. |
-| Backend | FastAPI (Python) | Async, webhook-ready, lightweight |
-| Database | PostgreSQL via Supabase | Managed, zero-ops, realtime, RLS |
-| Cache | Redis | Sprint state, rate limits, async queue |
-| Auth | Azure AD | M365 ecosystem, SSO, unlocks Graph API |
-| Prompt caching | Version 1 in MVP (cache_control on static prompts) | 60% cost reduction. Baked in Day 1, not retrofitted. |
-| Eval timing | Design Week 3, build Week 4 | Don't evaluate unstable behaviour. Design before ship. |
-| Enterprise phase | After MVP validation only | Don't over-engineer before value is proven. |
+| **Agent pattern** | Supervisor + specialist (Orchestrator + 5 specialists), not monolithic | Separation of concerns — each agent owns one domain; token management — focused agents have tighter context; security isolation — Comms Agent has no JIRA credentials |
+| **Primary interface** | Microsoft Teams (Adaptive Cards) instead of Slack or custom dashboard | Company uses M365 — no adoption friction, bot lives where the team already works; single Azure AD auth unlocks Outlook, Graph API, and Teams transcripts for free |
+| **Ticketing system (MVP)** | JIRA only | Company uses JIRA; one integration proven well beats three done poorly; proves the pattern before expanding |
+| **JIRA integration pattern** | Pre-built tool functions as primary, JQL generation as fallback | Pre-built tools are reliable, testable, and eval-able for 90% of use cases; JQL fallback handles freeform queries without over-engineering |
+| **Atlassian MCP** | Deferred to enterprise phase | Less control over what is fetched; token bloat risk without filtering; pre-built tools give tighter scope for MVP |
+| **JIRA query modes** | Both SM-initiated (Teams) and proactive scheduled (cron) | SM asks in real time; AgileBot also generates reports unprompted — both modes needed for full automation |
+| **Backend framework** | FastAPI (Python) | Async, webhook-ready, lightweight; matches Python AI ecosystem |
+| **Database** | PostgreSQL via Supabase | Managed, zero-ops, realtime capabilities, row-level security built in |
+| **Cache layer** | Redis | Sprint state, rate limiting, async job queue |
+| **Auth** | Azure AD | M365 ecosystem; SSO; unlocks Microsoft Graph API for calendar, email, and meetings in later phases |
+| **Bot framework** | Azure Bot Service + botbuilder-python | Required for Teams channel integration; handles auth and message routing from M365 |
+| **Hosting** | Railway for MVP → AWS ECS for scale | Railway is Docker-based with zero-ops for MVP; ECS with ALB load balancer and auto-scaling for enterprise |
+| **Observability** | LangSmith + Datadog | LangSmith traces agent calls and tool use; Datadog covers infra metrics |
+| **Prompt caching — V1** | `cache_control` on all static system prompts from Day 1 | 60% cost reduction on repeated orchestrator calls; baked in at build time, not retrofitted — retrofitting touches every agent call |
+| **Prompt caching — V2** | Semantic cache via Redis embeddings (enterprise phase) | Additional 20–30% savings; catches semantically similar queries before they reach the LLM; built on top of V1 |
+| **LLM model tiers** | claude-opus-4-5 for orchestrator, claude-haiku-4-5 for Ticket Agent tool selection | Haiku is faster and cheaper for structured tool selection decisions; Opus for complex routing and reasoning |
+| **Webhook pattern** | Teams pushes events to AgileBot, not AgileBot polling Teams | Lower latency, lower resource usage, simpler code; correct mental model for event-driven agentic systems |
+| **Orchestrator routing rules** | Explicit if/then routing rules in system prompt, not just agent descriptions | Agent descriptions alone are insufficient — overlapping domain language causes misroutes; LLM needs explicit decision rules for ambiguous cases |
+| **LLM output parsing** | Fuzzy normalization in parser, not silent fallback | Silent fallback masked failures — system appeared to work but was routing incorrectly; explicit normalization surfaces parsing errors visibly |
+| **HITL boundary** | SM approves: ticket moves, assignments, calendar events, emails, escalations. Auto-execute: summaries, flags, drafts, comments | SM never writes from scratch — only reviews and approves consequential actions; rote output is fully automated |
+| **Eval timing** | Design in Week 3, build in Week 4 | Evaluating unstable behaviour is wasted effort; but "fast follow" without a design date means it never happens |
+| **Enterprise phase sequencing** | Enterprise hardening begins only after MVP is validated with a real team | Avoid over-engineering before value is proven; right order is MVP → prove value → harden → go to market |
+| **Multi-tenancy (enterprise)** | Separate DB schemas per tenant | No cross-tenant data access is architecturally possible — not just a policy |
+| **Data residency (enterprise)** | Region selector at onboarding — EU / Canada / US | Data never leaves the chosen region; required for enterprise procurement in regulated industries |
+| **Compliance (enterprise)** | SOC 2 Type II, GDPR, ISO 27001 — third-party audited | Required before enterprise procurement will evaluate the tool; plan certification 3–6 months before go-to-market |
 
 ---
 
