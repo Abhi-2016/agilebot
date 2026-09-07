@@ -5,8 +5,10 @@
 | Week | Focus | Status |
 |---|---|---|
 | Week 1 — Days 1-2 | FastAPI scaffold, orchestrator skeleton, prompt caching | ✅ Complete |
-| Week 1 — Days 3-5 | JIRA integration, ticket grooming, alerts | 🔄 In progress |
-| Week 2 | Teams bot, intent detection, standup, blocker HITL | 🔜 Pending |
+| Week 1 — Days 3-5 | JIRA integration, ticket grooming, alerts | ✅ Complete |
+| Week 2 — Days 6-7 | Azure Bot Service, HMAC JWT auth, ConnectorClient reply, Web Chat verified | ✅ Complete |
+| Week 2 — Days 8-9 | Blocker Agent, async standup collection | 🔜 Pending |
+| Week 2 — Day 10 | HITL Adaptive Card approval flow | 🔜 Pending |
 | Week 3 | Ceremonies, metrics, eval suite design | 🔜 Pending |
 | Week 4 | Eval suite build (fast follow) | 🔜 Pending |
 
@@ -122,3 +124,7 @@ This project is built as a portfolio piece for an Agentic AI Product Builder car
 | 2026-07-15 | **Webhooks over polling.** Teams pushes events to AgileBot rather than AgileBot polling Teams. Lower latency, lower resource usage, simpler code — and the right mental model for event-driven agentic systems. |
 | 2026-07-18 | **Silent fallback masking is a production anti-pattern.** The orchestrator was routing everything to the Comms Agent even though the LLM's reasoning explicitly said "Ticket Agent." The bug: parser couldn't match "Ticket Agent" to "ticket" and silently fell back to the default. The LLM was right the whole time. Fix: fuzzy normalization + strip " agent" suffix. Production lesson: never use a silent default when parsing LLM output — use explicit unknown states so failures are visible, not hidden. |
 | 2026-07-18 | **Agent descriptions are not routing rules.** Telling the orchestrator what each agent "owns" is insufficient. Overlapping domain language ("blocking the sprint" vs. "Blocker Agent") causes misroutes. Explicit if/then routing rules resolve ambiguity. The orchestrator needs to know not just what each agent does — but which agent wins when multiple could apply. |
+| 2026-09-07 | **Bot reply is async-decoupled.** Azure Bot Service does not expect the reply in the HTTP response body — the bot must send a separate outbound POST to the conversation service URL via `ConnectorClient`. If you await the HTTP response and put text there, nothing appears in Teams. This is the correct pattern for all cloud bot frameworks. |
+| 2026-09-07 | **Next-gen JIRA projects break standard JQL.** `openSprints()` JQL and `sprint` field filtering via `/search` both fail with 410 Gone on team-managed projects. The fix: resolve the active sprint ID via the Agile board API (`/rest/agile/1.0/board/{id}/sprint?state=active`), then fetch issues via `/rest/agile/1.0/sprint/{id}/issue`. Never assume classic JQL works on next-gen projects. |
+| 2026-09-07 | **API fields can be null — always use `.get()`.** The `priority` field is null on tickets in next-gen JIRA projects. `fields["priority"]["name"]` throws KeyError. The safe pattern: `(fields.get("priority") or {}).get("name", "None")`. Apply this discipline to every nested API field — do not assume fields exist. |
+| 2026-09-07 | **Single Tenant bots require `channel_auth_tenant`.** `MicrosoftAppCredentials` without `channel_auth_tenant` causes a `KeyError: access_token` when fetching the auth token. The credential object needs to know which tenant to authenticate against. Personal Microsoft accounts cannot interact with Azure Bot Service bots at all — testing requires a work or school M365 account. |
