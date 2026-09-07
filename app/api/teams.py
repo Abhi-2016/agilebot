@@ -50,7 +50,7 @@ async def _verify_request(request: Request) -> None:
         raise HTTPException(status_code=401, detail=f"Auth failed: {e}")
 
 
-async def _send_reply(activity: Activity, text: str) -> None:
+def _send_reply(activity: Activity, text: str) -> None:
     """
     Sends a reply back into the Teams conversation using ConnectorClient.
     The reply appears in the same thread the SM sent the original message from.
@@ -58,6 +58,7 @@ async def _send_reply(activity: Activity, text: str) -> None:
     credentials = MicrosoftAppCredentials(
         settings.azure_bot_app_id,
         settings.azure_bot_app_password,
+        channel_auth_tenant=settings.azure_bot_tenant_id,
     )
     connector = ConnectorClient(credentials, base_url=activity.service_url)
     reply = Activity(
@@ -68,7 +69,7 @@ async def _send_reply(activity: Activity, text: str) -> None:
         recipient=activity.from_property,
         reply_to_id=activity.id,
     )
-    await connector.conversations.send_to_conversation_async(
+    connector.conversations.send_to_conversation(
         activity.conversation.id, reply
     )
 
@@ -112,7 +113,7 @@ async def receive_teams_message(request: Request):
     reply_text = result.get("response") or f"Routed to {decision.agent} agent."
 
     # Send reply back into Teams
-    await _send_reply(activity, reply_text)
+    _send_reply(activity, reply_text)
 
     return {
         "routed_to": decision.agent,
