@@ -1,7 +1,66 @@
 from app.db import jira_client as jira
 from app.config import settings
+from typing import Optional
 
 PROJECT = settings.jira_project_key
+
+# Cached active sprint ID — avoids repeated board API calls per request
+_active_sprint_id: Optional[int] = None
+
+
+def get_active_sprint_id() -> Optional[int]:
+    """
+    Resolves the active sprint ID via the Agile board API.
+    Required for next-gen (team-managed) projects where openSprints()
+    JQL function is not supported. Cached in memory after first call.
+    """
+    global _active_sprint_id
+    if _active_sprint_id:
+        return _active_sprint_id
+
+    board_data = jira.get("/rest/agile/1.0/board", {"projectKeyOrId": PROJECT})
+    boards = board_data.get("values", [])
+    if not boards:
+        return None
+    board_id = boards[0]["id"]
+
+    sprint_data = jira.get(
+        f"/rest/agile/1.0/board/{board_id}/sprint",
+        {"state": "active"}
+    )
+    sprints = sprint_data.get("values", [])
+    if not sprints:
+        return None
+
+    _active_sprint_id = sprints[0]["id"]
+    return _active_sprint_id
+
+
+def get_sprint_jql() -> str:
+    """Returns the JQL sprint clause for the active sprint."""
+    sprint_id = get_active_sprint_id()
+    if sprint_id:
+        return f"sprint = {sprint_id}"
+    return "sprint in openSprints()"  # fallback for classic projects
+
+
+def get_sprint_issues(extra_fields: str = "") -> list:
+    """
+    Fetches all issues in the active sprint via the Agile API.
+    Works for both next-gen and classic Jira projects.
+    """
+    sprint_id = get_active_sprint_id()
+    if not sprint_id:
+        return []
+    sp_field = jira.get_story_points_field()
+    fields = f"summary,status,assignee,priority,labels,{sp_field}"
+    if extra_fields:
+        fields += f",{extra_fields}"
+    data = jira.get(
+        f"/rest/agile/1.0/sprint/{sprint_id}/issue",
+        {"fields": fields, "maxResults": 100}
+    )
+    return data.get("issues", [])
 
 
 def get_sprint_health() -> dict:
@@ -10,13 +69,7 @@ def get_sprint_health() -> dict:
     total tickets, by status, blocked count, completion percentage.
     """
     sp_field = jira.get_story_points_field()
-    data = jira.get("/search", {
-        "jql": f"project = {PROJECT} AND sprint in openSprints()",
-        "fields": f"summary,status,assignee,priority,labels,{sp_field}",
-        "maxResults": 100,
-    })
-
-    issues = data.get("issues", [])
+    issues = get_sprint_issues()
     status_counts: dict[str, int] = {}
     blocked = 0
     total_points = 0
@@ -53,25 +106,21 @@ def get_blocked_tickets() -> list[dict]:
     Returns all tickets in the active sprint that are labelled 'blocked'
     or have 'blocked' in their status, with assignee and age in days.
     """
-    data = jira.get("/search", {
-        "jql": (
-            f"project = {PROJECT} AND sprint in openSprints() "
-            f"AND (labels = blocked OR status = Blocked)"
-        ),
-        "fields": "summary,status,assignee,priority,created,updated",
-        "maxResults": 50,
-    })
-
+    issues = get_sprint_issues("created,updated")
     results = []
-    for issue in data.get("issues", []):
+    for issue in issues:
         fields = issue["fields"]
+        labels = [l.lower() for l in fields.get("labels", [])]
+        status = fields["status"]["name"].lower()
+        if "blocked" not in labels and "blocked" not in status:
+            continue
         results.append({
             "ticket_id": issue["key"],
             "title": fields["summary"],
             "status": fields["status"]["name"],
             "assignee": (fields.get("assignee") or {}).get("displayName", "Unassigned"),
-            "priority": fields["priority"]["name"],
-            "updated": fields["updated"],
+            "priority": (fields.get("priority") or {}).get("name", "None"),
+            "updated": fields.get("updated"),
         })
     return results
 
@@ -82,17 +131,10 @@ def get_ungroomed_stories() -> list[dict]:
     assignee, or description — the three grooming essentials.
     """
     sp_field = jira.get_story_points_field()
-    data = jira.get("/search", {
-        "jql": (
-            f"project = {PROJECT} AND sprint in openSprints() "
-            f"AND issueType != Sub-task"
-        ),
-        "fields": f"summary,status,assignee,description,{sp_field}",
-        "maxResults": 100,
-    })
+    issues = get_sprint_issues("description")
 
     ungroomed = []
-    for issue in data.get("issues", []):
+    for issue in issues:
         fields = issue["fields"]
         missing = []
 
@@ -180,7 +222,7 @@ def get_ticket_detail(ticket_id: str) -> dict:
         "title": fields["summary"],
         "status": fields["status"]["name"],
         "assignee": (fields.get("assignee") or {}).get("displayName", "Unassigned"),
-        "priority": fields["priority"]["name"],
+        "priority": (fields.get("priority") or {}).get("name", "None"),
         "story_points": fields.get(sp_field),
         "labels": fields.get("labels", []),
         "description": fields.get("description"),
